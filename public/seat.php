@@ -1,25 +1,28 @@
 <?php
 session_start();
-    include("conn.php");
-    if (!isset($_SESSION["user_name"])){
-        header("location:login.php");
-        exit();
-    }
+include("conn.php");
 
-    if (!isset($_GET["movie_id"]) && !isset($_GET["runtime_id"])){
-        header("location:home.php");
-        exit();
-    }
-    
-    $movie_id = $_GET["movie_id"];
-    $runtime_id = $_GET['runtime_id'] ?? null; 
-    if ($runtime_id === null) {
-        die("Error: time_id tidak ditemukan di URL.");
-    }
-    $runtime_query = $conn->query("SELECT * FROM runtime WHERE runtime_id = $runtime_id");
-    $runtime = $runtime_query->fetch_assoc();
+if (!isset($_SESSION["user_name"])) {
+    header("location:login.php");
+    exit();
+}
 
-    $seats_query = $conn->query("SELECT * FROM seats WHERE runtime_id = $runtime_id");
+if (!isset($_GET["movie_id"]) || !isset($_GET["runtime_id"])) {
+    header("location:home.php");
+    exit();
+}
+
+$movie_id = $_GET["movie_id"];
+$runtime_id = $_GET['runtime_id'];
+
+$runtime_query = $conn->query("SELECT * FROM runtime WHERE runtime_id = $runtime_id");
+$runtime = $runtime_query->fetch_assoc();
+
+$seats_query = $conn->query("SELECT * FROM seats WHERE runtime_id = $runtime_id");
+
+if (!$seats_query) {
+    die("Error: Query seat gagal. " . $conn->error);
+}
 ?>
 
 <!DOCTYPE html>
@@ -39,8 +42,10 @@ session_start();
     <section>
         <h2> Pilih Kursi </h2>
         <?php
-            while ($seat = $seat_query->fetch_assoc()){
-                echo "<a href='payment.php?movie_id=".$movie_id."&time_id=".$time_id."&seat_id=".$seat['seat_id']."'><button>".$seat['seat_no']."</button></a>";
+            while ($seat = $seats_query->fetch_assoc()) {
+                echo "<a href='payment.php?movie_id=".$movie_id."&runtime_id=".$runtime_id."&seat_id=".$seat['seat_id']."'>
+                        <button>".$seat['seat_no']."</button>
+                      </a>";
             }
         ?>
     </section>

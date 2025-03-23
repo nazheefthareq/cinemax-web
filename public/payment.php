@@ -1,38 +1,57 @@
 <?php
 session_start();
-    include("conn.php");
-        if (!isset($_SESSION["username"])){
-            header("location:login.php");
-            exit();
-        }
-    
-    $movie_id = $_GET['movie_id'];
-    $waktutayang_id = $_GET['waktu_id'];
-    $seat_id = $_GET['seat_id'];
+include("conn.php");
 
-    $movie_query = $conn->query("SELECT * FROM movie WHERE id = $movie_id");
-    $movie = $movie_query->fetch_assoc();
+if (!isset($_SESSION["user_name"])) {
+    header("location:login.php");
+    exit();
+}
 
-    $waktutayang_query = $conn->query("SELECT * FROM waktu_tayang WHERE id = $waktutayang_id");
-    $waktutayang = $waktutayang_query->fetch_assoc();
+if (!isset($_GET['movie_id'], $_GET['runtime_id'], $_GET['seat_id'])) {
+    die("Parameter tidak lengkap!");
+}
 
-    $seat_query = $conn->query("SELECT * FROM kursi WHERE id = $seat_id");
-    $seat = $seat_query->fetch_assoc();
+$user_id = $_SESSION['user_id']; 
 
-    if(isset($_POST["konfirmasi"])){
-        $movie_name = $_POST["movie"];
-        $waktu = $_POST["waktu"];
-        $kursi = $_POST["kursi"];
-        $tanggal = $_POST["tanggal"];
+$movie_id = (int) $_GET['movie_id'];
+$waktutayang_id = (int) $_GET['runtime_id'];
+$seat_id = (int) $_GET['seat_id'];
 
-        $sql = "INSERT INTO payment (movie_id,waktu_tayang_id,kursi_id,tanggal) VALUES ('$movie_name','$waktu','$kursi','$tanggal')";
+$movie_query = $conn->prepare("SELECT * FROM movie WHERE movie_id = ?");
+$movie_query->bind_param("i", $movie_id);
+$movie_query->execute();
+$movie = $movie_query->get_result()->fetch_assoc();
 
-        if($conn->query($sql) === TRUE){
-            header("location:login.php");
-            }else{
-            echo "Error silakan coba lagi";
-            }
+$waktutayang_query = $conn->prepare("SELECT * FROM runtime WHERE runtime_id = ?");
+$waktutayang_query->bind_param("i", $waktutayang_id);
+$waktutayang_query->execute();
+$waktutayang = $waktutayang_query->get_result()->fetch_assoc();
+
+$seat_query = $conn->prepare("SELECT * FROM seats WHERE seat_id = ?");
+$seat_query->bind_param("i", $seat_id);
+$seat_query->execute();
+$seat = $seat_query->get_result()->fetch_assoc();
+
+if (!$movie || !$waktutayang || !$seat) {
+    die("Data tidak ditemukan.");
+}
+if (isset($_POST["konfirmasi"])) {
+    $tanggal = date('Y-m-d');
+    $waktu = date('H:i:s');
+
+    $sql = $conn->prepare("
+        INSERT INTO booking (booking_date, booking_time) 
+        VALUES (?, ?)
+    ");
+    $sql->bind_param("ss", $tanggal, $waktu);
+
+    if ($sql->execute()) {
+        header("location:home.php"); 
+        exit();
+    } else {
+        die("Error: " . $sql->error);
     }
+}
 ?>
 
 <!DOCTYPE html>
@@ -50,19 +69,15 @@ session_start();
         </ul>
     </nav>
     <section>
-        <h2> Booking Detail </h2>
-        <p>Movie : <?php echo $movie['judul'];?></p>
-        <p>Studio : <?php echo $waktutayang['studio'];?></p>
-        <p>Waktu : <?php echo $waktutayang['time'];?></p>
-        <p>Nomor Kursi : <?php echo $seat['nomor_kursi'];?></p>
+        <h2>Booking Detail</h2>
+        <p>Movie : <?php echo htmlspecialchars($movie['movie_title']); ?></p>
+        <p>Studio : <?php echo htmlspecialchars($waktutayang['runtime_cinema']); ?></p>
+        <p>Waktu : <?php echo htmlspecialchars($waktutayang['runtime_time']); ?></p>
+        <p>Nomor Kursi : <?php echo htmlspecialchars($seat['seat_no']); ?></p>
     </section>
     <section>
-        <form method=POST>
-            <input type="hidden" name="movie" value="<?php echo $movie_id ?>">
-            <input type="hidden" name="waktu" value="<?php echo $waktutayang_id ?>">
-            <input type="hidden" name="kursi" value="<?php echo $seat_id ?>">
-            <input type="hidden" name="tanggal" value="<?php echo date('Y-m-d H:i:s')?>">
-            <button type="submit" name="konfirmasi"> Konfirmasi Pemesanan </button>
+        <form method="POST">
+            <button type="submit" name="konfirmasi">Konfirmasi Pemesanan</button>
         </form>
     </section>
 </body>

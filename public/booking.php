@@ -48,7 +48,7 @@ session_start();
             echo "<div>";
             echo "<h3>".$runtime['runtime_cinema']."</h3>";
             echo "<h3>".$runtime['runtime_date']."</h3>";
-            echo "<a href='seat.php?movie_id=".$movie_id."&runtime=".$runtime['runtime_id']."'><button>".$runtime['runtime_time']."</button></a>";
+            echo "<a href='seat.php?movie_id=".$movie_id."&runtime_id=".$runtime['runtime_id']."'>";
             echo "</div>";
             }
         ?>
